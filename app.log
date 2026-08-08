@@ -1,0 +1,10 @@
+2026-08-07 15:56:34,621 - HTTP Error (e.g., 404, 500): 404 Client Error: Not Found for url: https://fakestoreapi.com/productsww
+2026-08-07 15:56:50,645 - 200: Connection Success
+2026-08-07 16:23:27,430 - HTTP Error (e.g., 404, 500): 404 Client Error: Not Found for url: https://fakestoreapi.com/producst
+2026-08-07 16:23:27,432 - File created in data/raw/products_20260807_1623.json!
+2026-08-07 16:23:55,425 - HTTP Error (e.g., 404, 500): 404 Client Error: Not Found for url: https://fakestoreapi.com/producst
+2026-08-07 16:23:55,426 - File created in data/raw/products_20260807_1623.json!
+2026-08-07 16:24:19,675 - 200: Connection Success
+2026-08-07 16:24:19,677 - File created in data/raw/products_20260807_1624.json!
+2026-08-07 21:03:10,906 - Data writed to a variable
+2026-08-07 21:03:11,074 - Connection Sucessful!
