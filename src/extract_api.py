@@ -45,12 +45,19 @@ def save_raw_data(data, endpoint: str):
     formatted_date = now.strftime("%Y%m%d_%H%M")
 
     folder_path = f"data/raw"
-    os.makedirs(folder_path, exist_ok=True)
+    try: 
+        os.makedirs(folder_path, exist_ok=True)
 
-    file_path = f"{folder_path}/{endpoint}_{formatted_date}.json"
+        file_path = f"{folder_path}/{endpoint}_{formatted_date}.json"
 
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, indent=4)
-        logging.info(f"File created in {file_path}!")
+        with open(file_path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4)
+            logging.info(f"File created in {file_path}!")
+    except PermissionError as p:
+        logging.error(f'Access denied: {p}')
+    except FileNotFoundError as f:
+        logging.error(f'Path doesnt exists: {f}')
+    except OSError as e:
+        logging.error(f'Error: {e}')
 
 save_raw_data(extract_data('products'),'products')
