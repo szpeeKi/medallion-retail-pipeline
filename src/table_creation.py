@@ -30,3 +30,5 @@ try:
     conn.close()
 except Exception as e:
     logging.error(f'Connection Failed! {e}')
+
+

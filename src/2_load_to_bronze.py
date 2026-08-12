@@ -1,13 +1,17 @@
 import logging
 import json
 import psycopg2
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+json_path = BASE_DIR / 'data' / 'raw' / 'products_20260807_1624.json'
 
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
                     filename='app.log',
                     filemode='a')
 
-with open('data/raw/products_20260807_1624.json', 'r') as file:
+with open(json_path, 'r') as file:
     content = json.load(file)
     logging.info('Data writed to a variable')
 
