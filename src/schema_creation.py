@@ -5,37 +5,53 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s - %(message)s",
                     filename='app.log',
                     filemode='a')
+conn = None
 try: 
-    conn = psycopg2.connect(
+    with psycopg2.connect(
         dbname='postgres',
         user='postgres',
         password='admin',
         host='localhost'
-    )
+    ) as conn:
 
-    logging.info('Connection Sucessful!')
+        logging.info('Connection Successful!')
 
-    cur = conn.cursor()
+        with conn.cursor() as cur:
+            cur.execute("DROP TABLE IF EXISTS bronze_products, silver_products, dim_product, fact_category_metrics, dim_category, bronze.products")
+            cur.execute("""CREATE SCHEMA IF NOT EXISTS bronze;""")
+            cur.execute("""CREATE SCHEMA IF NOT EXISTS silver;""")
+            cur.execute("""CREATE SCHEMA IF NOT EXISTS gold;""")
+            cur.execute("""CREATE TABLE bronze.products (
+                            id INTEGER,
+                            title TEXT,
+                            description TEXT,
+                            category TEXT,
+                            price NUMERIC(12,2),
+                            discount_percentage NUMERIC(5,2),
+                            rating NUMERIC(3,2),
+                            stock INTEGER,
+                            tags JSONB,
+                            brand TEXT,
+                            sku TEXT,
+                            weight NUMERIC(10,2),
+                            dimensions JSONB,
+                            warranty_information TEXT,
+                            shipping_information TEXT,
+                            availability_status TEXT,
+                            reviews JSONB,
+                            return_policy TEXT,
+                            minimum_order_quantity INTEGER,
+                            meta JSONB,
+                            images JSONB,
+                            thumbnail TEXT,
+                            source_file TEXT,
+                            ingested_at TIMESTAMPTZ,
 
-    cur.execute("DROP TABLE bronze_products, silver_products")
-    cur.execute("""CREATE SCHEMA IF NOT EXISTS bronze (
-                    id INT PRIMARY KEY,
-                    title VARCHAR(255),
-                    price NUMERIC(10,2),
-                    description TEXT,
-                    category VARCHAR(255),
-                    image TEXT,
-                    rating JSONB
-                    );""")
-    cur.execute("""CREATE SCHEMA IF NOT EXISTS silver (
-                    id INT PRIMARY KEY,
-                    title TEXT,
-                    price FLOAT,
-                    description TEXT,
-                    category TEXT,
-                    image TEXT,
-                    rating_score FLOAT,
-                    rating_count INT
-                    );""")
-except Exception as e:
-    logging.error(f'Connection Failed! {e}')
+                            PRIMARY KEY (id, source_file)
+            );""")
+
+finally:
+    if conn:
+        conn.close()
+    else:
+        logging.error('Connection Failed')
