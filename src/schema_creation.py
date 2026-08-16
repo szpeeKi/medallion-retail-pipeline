@@ -16,19 +16,26 @@ try:
     logging.info('Connection Sucessful!')
 
     cur = conn.cursor()
-    cur.execute("""CREATE TABLE IF NOT EXISTS bronze_products (
+
+    cur.execute("DROP TABLE bronze_products, silver_products")
+    cur.execute("""CREATE SCHEMA IF NOT EXISTS bronze (
                     id INT PRIMARY KEY,
                     title VARCHAR(255),
-                    price FLOAT,
+                    price NUMERIC(10,2),
                     description TEXT,
                     category VARCHAR(255),
                     image TEXT,
                     rating JSONB
                     );""")
-    conn.commit()
-    cur.close()
-    conn.close()
+    cur.execute("""CREATE SCHEMA IF NOT EXISTS silver (
+                    id INT PRIMARY KEY,
+                    title TEXT,
+                    price FLOAT,
+                    description TEXT,
+                    category TEXT,
+                    image TEXT,
+                    rating_score FLOAT,
+                    rating_count INT
+                    );""")
 except Exception as e:
     logging.error(f'Connection Failed! {e}')
-
-

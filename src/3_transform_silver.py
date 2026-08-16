@@ -19,23 +19,9 @@ try:
     logging.info('Connection Sucessful!')
 
     cur = conn.cursor()
-
-    cur.execute("""
-            CREATE TABLE IF NOT EXISTS silver_products(
-                id INT PRIMARY KEY,
-                title TEXT,
-                price FLOAT,
-                description TEXT,
-                category TEXT,
-                image TEXT,
-                rating_score FLOAT,
-                rating_count INT);
-            """)
-    conn.commit()
-
     cur.execute("""
             INSERT INTO 
-                silver_products(id, title, price, description, 
+                silver(id, title, price, description, 
                                 category, image, rating_score, rating_count)
 
             SELECT 
@@ -47,7 +33,7 @@ try:
                 image,
                 (rating->>'rate')::FLOAT,
                 (rating->>'count')::INT
-            FROM bronze_products
+            FROM bronze
             ON CONFLICT (id) DO UPDATE SET 
                                     title = EXCLUDED.title, 
                                     price = EXCLUDED.price,

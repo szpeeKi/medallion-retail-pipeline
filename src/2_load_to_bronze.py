@@ -37,7 +37,7 @@ try:
             json.dumps(item['rating'])
         )
         cur.execute("""INSERT INTO 
-                        bronze_products(id,title,price,description,category,image,rating)
+                        bronze(id,title,price,description,category,image,rating)
                         VALUES
                         (%s,%s,%s,%s,%s,%s,%s)
                         ON CONFLICT (id) DO UPDATE SET 
