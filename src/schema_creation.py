@@ -50,6 +50,26 @@ try:
                             PRIMARY KEY (id, source_file)
             );""")
 
+            cur.execute("""CREATE TABLE silver.products (
+                            id INTEGER,
+                            title TEXT,
+                            description TEXT,
+                            category TEXT,
+                            price NUMERIC(10,2),
+                            discount_percentage NUMERIC(5,2),
+                            rating NUMERIC(3,2),
+                            brand TEXT,
+                            weight NUMERIC(5,2),
+                            dimension_width NUMERIC(5,2),
+                            dimension_height NUMERIC(5,2),
+                            dimension_depth NUMERIC(5,2),
+                            availability_status TEXT,
+                            barcode TEXT,
+                            snapshot_date DATE
+
+                            PRIMARY KEY (id, snapshot_date)
+            );""")
+
 finally:
     if conn:
         conn.close()
