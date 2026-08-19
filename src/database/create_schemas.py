@@ -1,9 +1,14 @@
+from pathlib import Path
 import psycopg2
 import logging
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
-                    filename='app.log',
+                    filename=LOG_DIR / 'app.log',
                     filemode='a')
 conn = None
 try: 
@@ -52,6 +57,7 @@ try:
 
             cur.execute("""CREATE TABLE silver.products (
                             id INTEGER,
+                            snapshot_date DATE,
                             title TEXT,
                             description TEXT,
                             category TEXT,
@@ -65,7 +71,6 @@ try:
                             dimension_depth NUMERIC(5,2),
                             availability_status TEXT,
                             barcode TEXT,
-                            snapshot_date DATE
 
                             PRIMARY KEY (id, snapshot_date)
             );""")

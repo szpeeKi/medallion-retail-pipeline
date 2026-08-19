@@ -1,19 +1,24 @@
+from pathlib import Path
 import requests 
 import logging
 from datetime import datetime
 import os
 import json
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
-                    filename='app.log',
+                    filename=LOG_DIR / 'app.log',
                     filemode='a')
 
 
 
 
 def extract_data(endpoint: str):
-    URL = f'https://fakestoreapi.com/{endpoint}'
+    URL = f'https://dummyjson.com/{endpoint}'
 
     try:
         response = requests.get(URL)
@@ -44,11 +49,11 @@ def save_raw_data(data, endpoint: str):
     now = datetime.now()
     formatted_date = now.strftime("%Y%m%d_%H%M")
 
-    folder_path = f"data/raw"
+    folder_path = BASE_DIR / "data" / "raw"
     try: 
         os.makedirs(folder_path, exist_ok=True)
 
-        file_path = f"{folder_path}/{endpoint}_{formatted_date}.json"
+        file_path = folder_path / f"{endpoint}_{formatted_date}.json"
 
         with open(file_path, 'w', encoding='utf-8') as file:
             json.dump(data, file, indent=4)

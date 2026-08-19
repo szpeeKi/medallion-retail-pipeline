@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Dados brutos / intermediarios
+data/raw/*
+!data/raw/.gitkeep
+data/staging/
+data/processed/
+
+# Segredos e configuracao local
+.env
+*.env
+config/local*
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

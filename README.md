@@ -31,12 +31,38 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 ## 🚀 Estrutura do Repositório
 
 ```text
+medallion-retail-pipeline/
 ├── data/
-│   └── raw/                 # Armazenamento local dos JSONs brutos extraídos da API
+│   └── raw/                      # JSONs brutos extraidos da API (versionamento ignorado)
+├── infra/
+│   └── aws/
+│       └── lambda_handler.py     # Handler AWS Lambda (roadmap)
+├── logs/
+│   └── app.log                   # Log unico de execucao do pipeline
 ├── src/
-│   ├── 1_extract_raw.py     # Script de extração da API
-│   ├── 2_load_to_bronze.py  # Script de ingestão no PostgreSQL
-│   ├── 3_transform_silver.py# Limpeza e padronização (ELT)
-│   └── 4_model_gold.py      # Criação e carga do Star Schema
-├── requirements.txt         # Dependências do projeto
+│   ├── database/
+│   │   └── create_schemas.py     # DDL: schemas bronze/silver/gold e tabelas
+│   ├── extract/
+│   │   └── extract_products.py   # Extracao da API -> data/raw
+│   ├── load/
+│   │   └── load_bronze.py        # Ingestao do JSON bruto no PostgreSQL
+│   └── transform/
+│       ├── transform_silver.py   # Limpeza e padronizacao (ELT)
+│       └── build_gold.py         # Star Schema (dimensoes + fato)
+├── tests/                        # Testes automatizados
+├── requirements.txt              # Dependencias do projeto
+├── .gitignore
 └── README.md
+```
+
+---
+
+## ▶️ Ordem de Execucao
+
+```bash
+python -m src.database.create_schemas   # 1. cria schemas e tabelas
+python -m src.extract.extract_products  # 2. extrai da API para data/raw
+python -m src.load.load_bronze          # 3. carrega o bruto na camada bronze
+python -m src.transform.transform_silver # 4. limpa e padroniza -> silver
+python -m src.transform.build_gold       # 5. monta o star schema -> gold
+```

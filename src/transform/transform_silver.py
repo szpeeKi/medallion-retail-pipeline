@@ -1,10 +1,15 @@
+from pathlib import Path
 import logging
 import json
 import psycopg2
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
-                    filename='app.log',
+                    filename=LOG_DIR / 'app.log',
                     filemode='a')
 
 

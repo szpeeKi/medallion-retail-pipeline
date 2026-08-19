@@ -1,9 +1,14 @@
+from pathlib import Path
 import psycopg2
 import logging
 
+BASE_DIR = Path(__file__).resolve().parents[2]
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
-                    filename='app.log',
+                    filename=LOG_DIR / 'app.log',
                     filemode='a')
 try: 
     conn = psycopg2.connect(

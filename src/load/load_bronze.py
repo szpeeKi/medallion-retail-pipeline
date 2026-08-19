@@ -3,12 +3,15 @@ import json
 import psycopg2
 from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parents[2]
 json_path = BASE_DIR / 'data' / 'raw' / 'products_20260807_1624.json'
+
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, 
                     format="%(asctime)s - %(message)s",
-                    filename='app.log',
+                    filename=LOG_DIR / 'app.log',
                     filemode='a')
 
 with open(json_path, 'r') as file:
