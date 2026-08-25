@@ -9,9 +9,23 @@ from zoneinfo import ZoneInfo
 sp_zoneinfo = ZoneInfo("America/Sao_Paulo")
 ingested_at = datetime.now(sp_zoneinfo)
 
-source_file = 'products/2026/08/14/20260814_005126.json'
+BUCKET = 'medallion-retail-raw-rafa'
+PREFIX = 'products/'
+
+load_date = ingested_at.date()
+day_prefix = f"{PREFIX}{load_date:%Y/%m/%d}/"
+
 s3 = boto3.client('s3')
-response = s3.get_object(Bucket='medallion-retail-raw-rafa', Key=source_file)
+
+listing = s3.list_objects_v2(Bucket=BUCKET, Prefix=day_prefix)
+keys = sorted(obj['Key'] for obj in listing.get('Contents', []) if obj['Key'].endswith('.json'))
+
+if not keys:
+    raise FileNotFoundError(f'No file found for {load_date} in s3://{BUCKET}/{day_prefix}')
+
+source_file = keys[-1]
+
+response = s3.get_object(Bucket=BUCKET, Key=source_file)
 
 json_data = json.load(response['Body'])
 
@@ -50,7 +64,7 @@ try:
                     item['rating'],
                     item['stock'],
                     json.dumps(item['tags']),
-                    item['brand'],
+                    item.get('brand',None),
                     item['sku'],
                     item['weight'],
                     json.dumps(item['dimensions']),
@@ -66,7 +80,7 @@ try:
                     source_file,
                     ingested_at)
 
-            cur.execute(query,row)
+                cur.execute(query,row)
 
 except Exception:
     logging.exception('An error occurred while connecting')
