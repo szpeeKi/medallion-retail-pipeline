@@ -25,28 +25,30 @@ try:
 
     cur = conn.cursor()
     cur.execute("""
-            INSERT INTO 
-                silver(id, title, price, description, 
-                                category, image, rating_score, rating_count)
+                INSERT INTO silver.products(id,snapshot_date,title,description,category,price,
+                discount_percentage,rating,brand,weight,dimension_width,
+                dimension_height,dimension_depth,availability_status,barcode)
 
-            SELECT 
-                id,
-                TRIM(title),
-                price,
-                TRIM(description),
-                TRIM(UPPER(category)),
-                image,
-                (rating->>'rate')::FLOAT,
-                (rating->>'count')::INT
-            FROM bronze
-            ON CONFLICT (id) DO UPDATE SET 
-                                    title = EXCLUDED.title, 
-                                    price = EXCLUDED.price,
-                                    description = EXCLUDED.description,
-                                    category = EXCLUDED.category,
-                                    image = EXCLUDED.image,
-                                    rating_score = EXCLUDED.rating_score,
-                                    rating_count = EXCLUDED.rating_count;
+                SELECT DISTINCT ON (id,snapshot_date)
+                    id, 
+                    SPLIT_PART(SPLIT_PART(source_file, '/',5),'_',1)::DATE AS snapshot_date,
+                    title, 
+                    description, 
+                    category, 
+                    price, 
+                    discount_percentage, 
+                    rating, 
+                    brand, 
+                    weight, 
+                    (NULLIF(dimensions->>'width', ''))::NUMERIC(5,2),
+                    (NULLIF(dimensions->>'height', ''))::NUMERIC(5,2),
+                    (NULLIF(dimensions->>'depth', ''))::NUMERIC(5,2),
+                    availability_status,
+                    (meta->>'barcode')::TEXT
+                FROM bronze.products
+                ORDER BY id,snapshot_date,source_file DESC
+
+                ON CONFLICT (id, source_file) DO NOTHING
 """)
     conn.commit()
     conn.close()
