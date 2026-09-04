@@ -48,7 +48,12 @@ try:
                 FROM bronze.products
                 ORDER BY id,snapshot_date,source_file DESC
 
-                ON CONFLICT (id, source_file) DO NOTHING
+                ON CONFLICT (id, snapshot_date) 
+                DO UPDATE SET 
+                title = EXCLUDED.title, description = EXCLUDED.description, category = EXCLUDED.category, 
+                price = EXCLUDED.price, discount_percentage = EXCLUDED.discount_percentage, rating = EXCLUDED.rating, 
+                brand = EXCLUDED.brand, weight = EXCLUDED.weight, dimension_width = EXCLUDED.dimension_width, 
+                dimension_height = EXCLUDED.dimension_height, dimension_depth = EXCLUDED.dimension_depth, availability_status = EXCLUDED.availability_status, barcode = EXCLUDED.barcode 
 """)
     conn.commit()
     conn.close()
