@@ -26,7 +26,7 @@ try:
             cur.execute("""CREATE SCHEMA IF NOT EXISTS bronze;""")
             cur.execute("""CREATE SCHEMA IF NOT EXISTS silver;""")
             cur.execute("""CREATE SCHEMA IF NOT EXISTS gold;""")
-            cur.execute("""CREATE TABLE bronze.products (
+            cur.execute("""CREATE TABLE IF NOT EXISTS bronze.products (
                             id INTEGER,
                             title TEXT,
                             description TEXT,
@@ -55,7 +55,7 @@ try:
                             PRIMARY KEY (id, source_file)
             );""")
 
-            cur.execute("""CREATE TABLE silver.products (
+            cur.execute("""CREATE TABLE IF NOT EXISTS silver.products (
                             id INTEGER,
                             snapshot_date DATE,
                             title TEXT,
@@ -74,9 +74,28 @@ try:
 
                             PRIMARY KEY (id, snapshot_date)
             );""")
+            cur.execute("""CREATE TABLE IF NOT EXISTS gold.dim_category (
+                            category_id SERIAL PRIMARY KEY, 
+                            category_name TEXT UNIQUE
+            );""")
+
+            cur.execute("""CREATE TABLE IF NOT EXISTS gold.dim_product (
+                                                                   id INT PRIMARY KEY, 
+                                                                   category_id INT REFERENCES gold.dim_category (category_id), 
+                                                                   title TEXT, 
+                                                                   description TEXT, 
+                                                                   brand TEXT,
+                                                                   weight NUMERIC(5,2),
+                                                                   dimension_width NUMERIC(5,2),
+                                                                   dimension_height NUMERIC(5,2),
+                                                                   dimension_depth NUMERIC(5,2),
+                                                                   barcode TEXT
+            );""")
+        
+except Exception:
+    logging.exception('An error occurred while connecting')
+    raise
 
 finally:
     if conn:
         conn.close()
-    else:
-        logging.error('Connection Failed')
