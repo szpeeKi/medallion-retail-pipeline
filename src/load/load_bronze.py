@@ -3,6 +3,7 @@ import psycopg2
 import logging
 import boto3
 import json
+import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -48,7 +49,7 @@ try:
     with psycopg2.connect(
         dbname='postgres',
         user='postgres',
-        password='admin',
+        password=os.environ['DB_PASSWORD'],
         host='localhost'
     ) as conn:
         logging.info('Connection Successful!')
