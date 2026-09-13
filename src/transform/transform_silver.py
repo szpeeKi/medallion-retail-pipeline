@@ -2,6 +2,7 @@ from pathlib import Path
 import logging
 import json
 import psycopg2
+import os
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = BASE_DIR / 'logs'
@@ -17,7 +18,7 @@ try:
     conn = psycopg2.connect(
         dbname='postgres',
         user='postgres',
-        password='admin',
+        password=os.environ['DB_PASSWORD'],
         host='localhost'
     )
 
@@ -38,7 +39,7 @@ try:
                     price, 
                     discount_percentage, 
                     rating, 
-                    brand, 
+                    COALESCE(brand, 'No Brand'),
                     weight, 
                     (NULLIF(dimensions->>'width', ''))::NUMERIC(5,2),
                     (NULLIF(dimensions->>'height', ''))::NUMERIC(5,2),
