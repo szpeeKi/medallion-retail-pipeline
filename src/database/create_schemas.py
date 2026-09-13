@@ -1,6 +1,7 @@
 from pathlib import Path
 import psycopg2
 import logging
+import os
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = BASE_DIR / 'logs'
@@ -15,7 +16,7 @@ try:
     with psycopg2.connect(
         dbname='postgres',
         user='postgres',
-        password='admin',
+        password=os.environ['DB_PASSWORD'],
         host='localhost'
     ) as conn:
 
@@ -91,6 +92,20 @@ try:
                                 dimension_depth NUMERIC(5,2),
                                 barcode TEXT
             );""")
+
+            cur.execute("""CREATE TABLE IF NOT EXISTS gold.fact_product_snapshot(
+                                snapshot_date DATE,
+                                product_id INT REFERENCES gold.dim_product (id),
+                                category_id INT REFERENCES gold.dim_category (category_id),
+                                price NUMERIC(12,2),
+                                discount_percentage NUMERIC(5,2),
+                                rating NUMERIC(3,2),
+                                availability_status TEXT,
+
+                            PRIMARY KEY (snapshot_date, product_id)
+            )
+
+""")
         
 except Exception:
     logging.exception('An error occurred while connecting')
