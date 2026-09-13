@@ -1,6 +1,7 @@
 from pathlib import Path
 import psycopg2
 import logging
+import os
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 LOG_DIR = BASE_DIR / 'logs'
@@ -15,7 +16,7 @@ try:
     with psycopg2.connect(
         dbname='postgres',
         user='postgres',
-        password='admin',
+        password=os.environ['DB_PASSWORD'],
         host='localhost'
     ) as conn:
         logging.info('Connection Successful!')
@@ -52,6 +53,27 @@ try:
                                 dimension_depth = EXCLUDED.dimension_depth, barcode = EXCLUDED.barcode;
 
         """)
+
+            cur.execute("""INSERT INTO gold.fact_product_snapshot(snapshot_date, product_id, category_id, price, 
+                                                                  discount_percentage, rating, availability_status)
+
+                            SELECT 
+                                sil.snapshot_date,
+                                prod.id,
+                                cat.category_id,
+                                sil.price,
+                                sil.discount_percentage,
+                                sil.rating,
+                                sil.availability_status
+                            FROM silver.products AS sil
+                            JOIN gold.dim_category AS cat
+                                ON sil.category = cat.category_name
+                            JOIN gold.dim_product AS prod
+                                ON sil.id = prod.id
+                            ON CONFLICT (product_id, snapshot_date)
+                            DO NOTHING
+
+""")
             # Apos execucao do INSERT INTO, ele sai do with ja dando commit automaticamente. 
 
 except Exception:
