@@ -9,7 +9,7 @@ LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, 
-                    format="%(asctime)s - %(message)s",
+                    format="%(asctime)s - %(filename)s - %(message)s",
                     filename=LOG_DIR / 'app.log',
                     filemode='a')
 
@@ -22,7 +22,7 @@ try:
         host=os.environ['DB_HOST']
     )
 
-    logging.info('Connection Sucessful!')
+    logging.info('Connection Successful!')
 
     cur = conn.cursor()
     cur.execute("""

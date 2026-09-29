@@ -35,7 +35,7 @@ LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, 
-                    format="%(asctime)s - %(message)s",
+                    format="%(asctime)s - %(filename)s - %(message)s",
                     filename=LOG_DIR / 'app.log',
                     filemode='a')
 
@@ -54,6 +54,7 @@ try:
     ) as conn:
         logging.info('Connection Successful!')
         with conn.cursor() as cur:
+            inserted = 0
             for item in json_data['products']:
                 row = (
                     item['id'],
@@ -82,6 +83,9 @@ try:
                     ingested_at)
 
                 cur.execute(query,row)
+                inserted += cur.rowcount
+
+            logging.info(f'{inserted} of {len(json_data["products"])} rows inserted from {source_file}')
 
 except Exception:
     logging.exception('An error occurred while connecting')
