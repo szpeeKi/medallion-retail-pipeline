@@ -17,9 +17,9 @@ logging.basicConfig(level=logging.INFO,
 try: 
     conn = psycopg2.connect(
         dbname='postgres',
-        user='postgres',
+        user=os.environ['DB_USER'],
         password=os.environ['DB_PASSWORD'],
-        host='localhost'
+        host=os.environ['DB_HOST']
     )
 
     logging.info('Connection Sucessful!')

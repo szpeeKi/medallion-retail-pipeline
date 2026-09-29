@@ -15,15 +15,14 @@ conn = None
 try: 
     with psycopg2.connect(
         dbname='postgres',
-        user='postgres',
+        user=os.environ['DB_USER'],
         password=os.environ['DB_PASSWORD'],
-        host='localhost'
+        host=os.environ['DB_HOST']
     ) as conn:
 
         logging.info('Connection Successful!')
 
         with conn.cursor() as cur:
-            cur.execute("DROP TABLE IF EXISTS bronze_products, silver_products, dim_product, fact_category_metrics, dim_category, bronze.products")
             cur.execute("""CREATE SCHEMA IF NOT EXISTS bronze;""")
             cur.execute("""CREATE SCHEMA IF NOT EXISTS silver;""")
             cur.execute("""CREATE SCHEMA IF NOT EXISTS gold;""")

@@ -12,7 +12,7 @@ Este projeto extrai dados de produtos da API pública [dummyjson.com](https://du
 O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 
 * **Ingestion (Raw):** Extração via AWS Lambda, que salva o JSON bruto da API particionado por data no S3 (bucket `medallion-retail-raw-rafa`), evitando *Data Swamp*. A partição usa o fuso `America/Sao_Paulo`, para refletir o dia do negócio no Brasil. O script `extract_products.py` cobre a mesma extração para uso local em desenvolvimento.
-* **🥉 Bronze Layer:** Carga (Load) dos dados brutos do S3 no PostgreSQL, garantindo um espelho exato da origem e proteção contra duplicatas (`ON CONFLICT DO NOTHING`).
+* **🥉 Bronze Layer:** Carga (Load) dos dados brutos do S3 no PostgreSQL, garantindo um espelho exato da origem e proteção contra duplicatas (`ON CONFLICT DO NOTHING`). É *append-only*: cada carga é guardada junto com o nome do arquivo de origem (`source_file`), formando o histórico completo de tudo o que entrou no pipeline.
 * **🥈 Silver Layer:** Transformação (ELT) usando o motor do banco de dados para limpeza, padronização de categorias, tratamento de campos JSONB e remoção de nulos.
 * **🥇 Gold Layer:** Modelagem Dimensional (*Star Schema*). `dim_category` e `dim_product` (SCD Tipo 1, sempre com o atributo mais recente do produto) e a tabela fato `fact_product_snapshot`, granular por produto e por dia de snapshot, com métricas de preço, desconto, avaliação e status de disponibilidade.
 
@@ -31,9 +31,9 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 ## 🛠️ Tecnologias e Ferramentas
 
 * **Linguagem:** Python 3
-* **Banco de Dados:** PostgreSQL
+* **Banco de Dados:** PostgreSQL no Amazon RDS
 * **Bibliotecas Principais:** `psycopg2`, `requests`, `boto3`, `logging`
-* **Cloud:** AWS Lambda + S3 (camada Raw, implementado)
+* **Cloud:** AWS Lambda + S3 (camada Raw) e Amazon RDS (Data Warehouse)
 * **Orquestração:** Apache Airflow *(roadmap)*
 * **Práticas Adotadas:** Idempotência, Tratamento de Exceções, Logs de Execução, SQL DDL/DML, Modelagem Relacional.
 
@@ -68,15 +68,61 @@ medallion-retail-pipeline/
 
 ---
 
+## ⚙️ Configuração
+
+### 1. Dependências
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate     # Linux/macOS
+pip install -r requirements.txt
+```
+
+### 2. Variáveis de ambiente
+
+Nenhuma credencial fica no código. Os scripts leem a conexão com o banco destas variáveis:
+
+| Variável | O que é |
+|---|---|
+| `DB_HOST` | Endpoint do PostgreSQL (ex.: `<instancia>.<id>.us-east-1.rds.amazonaws.com`) |
+| `DB_USER` | Usuário do banco |
+| `DB_PASSWORD` | Senha do banco |
+
+```powershell
+# PowerShell (vale só para a sessão atual do terminal)
+$env:DB_HOST = "..."
+$env:DB_USER = "..."
+$env:DB_PASSWORD = "..."
+```
+
+```bash
+# Bash
+export DB_HOST="..." DB_USER="..." DB_PASSWORD="..."
+```
+
+A Lambda usa a variável `BUCKET_NAME`, configurada no próprio console da AWS.
+
+### 3. Credenciais AWS
+
+O `load_bronze.py` lê o arquivo do dia direto do S3 via `boto3`, então a máquina precisa de credenciais AWS configuradas (`aws configure`) com permissão de leitura no bucket.
+
+### 4. Acesso de rede ao RDS
+
+O security group da instância RDS só libera a porta `5432` para IPs específicos (`/32`). Se a conexão falhar com `Connection timed out`, o IP público da máquina provavelmente mudou (internet residencial costuma ter IP dinâmico): atualize a regra de entrada do security group com o IP atual. Nunca libere `0.0.0.0/0`.
+
+---
+
 ## ▶️ Ordem de Execucao
 
 ```bash
-python -m src.database.create_schemas   # 1. cria schemas e tabelas
-python -m src.extract.extract_products  # 2. extrai da API para data/raw
-python -m src.load.load_bronze          # 3. carrega o bruto na camada bronze
-python -m src.transform.transform_silver # 4. limpa e padroniza -> silver
-python -m src.transform.build_gold      # 5. monta o star schema -> gold
+python -m src.database.create_schemas    # 1. cria schemas e tabelas (idempotente)
+python -m src.load.load_bronze           # 2. carrega o JSON do dia (S3) na camada bronze
+python -m src.transform.transform_silver # 3. limpa e padroniza -> silver
+python -m src.transform.build_gold       # 4. monta o star schema -> gold
 ```
+
+A extração diária para o S3 é feita pela Lambda (`infra/aws/lambda_handler.py`). O `src.extract.extract_products` faz a mesma extração salvando em `data/raw`, apenas para desenvolvimento local; ele não alimenta a Bronze.
 
 ---
 
