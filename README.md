@@ -1,7 +1,7 @@
 # 🏅 Medallion Retail Pipeline
 
 ## 📖 Sobre o Projeto
-End-to-end Data Engineering pipeline usando Python, PostgreSQL, Airflow e AWS, totalmente baseado na **Arquitetura Medallion** (Raw, Bronze, Silver e Gold).
+End-to-end Data Engineering pipeline usando Python, PostgreSQL e AWS, totalmente baseado na **Arquitetura Medallion** (Raw, Bronze, Silver e Gold).
 
 Este projeto extrai dados de produtos da API pública [dummyjson.com](https://dummyjson.com) e processa essas informações através de camadas progressivas de qualidade de dados, culminando em um modelo dimensional (Star Schema) otimizado para consumo por ferramentas de Business Intelligence (BI).
 
@@ -11,7 +11,7 @@ Este projeto extrai dados de produtos da API pública [dummyjson.com](https://du
 
 O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 
-* **Ingestion (Raw):** Extração via AWS Lambda, que salva o JSON bruto da API particionado por data no S3 (bucket `medallion-retail-raw-rafa`), evitando *Data Swamp*. A partição usa o fuso `America/Sao_Paulo`, para refletir o dia do negócio no Brasil. O script `extract_products.py` cobre a mesma extração para uso local em desenvolvimento.
+* **Ingestion (Raw):** Extração via AWS Lambda, disparada todo dia às 21h (horário de São Paulo) pelo EventBridge Scheduler, que salva o JSON bruto da API particionado por data no S3 (bucket `medallion-retail-raw-rafa`), evitando *Data Swamp*. A partição usa o fuso `America/Sao_Paulo`, para refletir o dia do negócio no Brasil. O script `extract_products.py` cobre a mesma extração para uso local em desenvolvimento.
 * **🥉 Bronze Layer:** Carga (Load) dos dados brutos do S3 no PostgreSQL, garantindo um espelho exato da origem e proteção contra duplicatas (`ON CONFLICT DO NOTHING`). É *append-only*: cada carga é guardada junto com o nome do arquivo de origem (`source_file`), formando o histórico completo de tudo o que entrou no pipeline.
 * **🥈 Silver Layer:** Transformação (ELT) usando o motor do banco de dados para limpeza, padronização de categorias, tratamento de campos JSONB e remoção de nulos.
 * **🥇 Gold Layer:** Modelagem Dimensional (*Star Schema*). `dim_category` e `dim_product` (SCD Tipo 1, sempre com o atributo mais recente do produto) e a tabela fato `fact_product_snapshot`, granular por produto e por dia de snapshot, com métricas de preço, desconto, avaliação e status de disponibilidade.
@@ -33,8 +33,8 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 * **Linguagem:** Python 3
 * **Banco de Dados:** PostgreSQL no Amazon RDS
 * **Bibliotecas Principais:** `psycopg2`, `requests`, `boto3`, `logging`
-* **Cloud:** AWS Lambda + S3 (camada Raw) e Amazon RDS (Data Warehouse)
-* **Orquestração:** Apache Airflow *(roadmap)*
+* **Cloud:** AWS Lambda + S3 (camada Raw), EventBridge Scheduler (agendamento) e Amazon RDS (Data Warehouse)
+* **Orquestração:** agendamento diário da extração via EventBridge Scheduler; Apache Airflow para Bronze → Silver → Gold *(roadmap)*
 * **Práticas Adotadas:** Idempotência, Tratamento de Exceções, Logs de Execução, SQL DDL/DML, Modelagem Relacional.
 
 ---
@@ -122,10 +122,24 @@ python -m src.transform.transform_silver # 3. limpa e padroniza -> silver
 python -m src.transform.build_gold       # 4. monta o star schema -> gold
 ```
 
-A extração diária para o S3 é feita pela Lambda (`infra/aws/lambda_handler.py`). O `src.extract.extract_products` faz a mesma extração salvando em `data/raw`, apenas para desenvolvimento local; ele não alimenta a Bronze.
+A extração diária para o S3 é feita pela Lambda (`infra/aws/lambda_handler.py`), agendada no EventBridge Scheduler:
+
+| Parâmetro | Valor |
+|---|---|
+| Expressão | `cron(0 21 * * ? *)` (todo dia às 21h00) |
+| Fuso horário | `America/Sao_Paulo` |
+| Payload | `{"endpoint": "products"}` |
+| Retentativas | 3, dentro de uma janela de 24h |
+
+O horário de 21h deixa o dia de negócio praticamente fechado e ainda sobra folga antes da virada do dia. As camadas Bronze, Silver e Gold ainda são executadas manualmente, na ordem acima.
+
+O `src.extract.extract_products` faz a mesma extração salvando em `data/raw`, apenas para desenvolvimento local; ele não alimenta a Bronze.
 
 ---
 
 ## 🔁 Recuperação de Carga Perdida
 
-O pipeline roda uma vez por dia e é incremental. Se um dia não gerar arquivo no S3 (falha na Lambda, API fora do ar), a carga daquele dia não existe em nenhuma camada. A recuperação hoje é manual: rodar a extração apontando para a data específica, garantir que o arquivo caia na partição correta do S3, e então rodar bronze → silver → gold normalmente a partir dele.
+O pipeline é incremental e diário. Existem dois tipos de falha, com consequências diferentes:
+
+* **Faltou o arquivo no S3 (falha na captura):** a API devolve apenas o estado atual dos produtos, então o retrato de um dia que não foi capturado **não pode ser recuperado depois**. Por isso a captura roda na nuvem, agendada, com retentativas automáticas.
+* **O arquivo está no S3, mas não foi processado:** nada se perde. Hoje o `load_bronze.py` carrega apenas o arquivo mais recente do dia corrente, então o reprocessamento de dias anteriores é manual. A orquestração com Airflow (roadmap) resolve isso com *backfill*, passando para cada execução a data que ela deve processar.
