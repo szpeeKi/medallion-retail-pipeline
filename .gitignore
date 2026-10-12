@@ -20,6 +20,11 @@ data/processed/
 *.env
 config/local*
 
+# Airflow (gerados em tempo de execucao)
+airflow/logs/
+airflow/config/
+airflow/plugins/
+
 # IDE / SO
 .vscode/
 .idea/
