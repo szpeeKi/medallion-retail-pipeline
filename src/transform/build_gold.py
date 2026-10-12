@@ -3,47 +3,42 @@ import psycopg2
 import logging
 import os
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-LOG_DIR = BASE_DIR / 'logs'
-LOG_DIR.mkdir(exist_ok=True)
 
-logging.basicConfig(level=logging.INFO, 
-                    format="%(asctime)s - %(filename)s - %(message)s",
-                    filename=LOG_DIR / 'app.log',
-                    filemode='a')
-conn = None
-try: 
-    with psycopg2.connect(
-        dbname='postgres',
-        user=os.environ['DB_USER'],
-        password=os.environ['DB_PASSWORD'],
-        host=os.environ['DB_HOST']
-    ) as conn:
-        logging.info('Connection Successful!')
-        
-        with conn.cursor() as cur:
-            cur.execute("""INSERT INTO gold.dim_category(category_name)
-                            SELECT 
+def run():
+    """Monta a gold a partir da silver: dim_category, dim_product e fact_product_snapshot."""
+    conn = None
+    try:
+        with psycopg2.connect(
+            dbname='postgres',
+            user=os.environ['DB_USER'],
+            password=os.environ['DB_PASSWORD'],
+            host=os.environ['DB_HOST']
+        ) as conn:
+            logging.info('Connection Successful!')
+
+            with conn.cursor() as cur:
+                cur.execute("""INSERT INTO gold.dim_category(category_name)
+                            SELECT
                                 DISTINCT category
                             FROM silver.products
                             ON CONFLICT (category_name) DO NOTHING;""")
-            cur.execute("""INSERT INTO gold.dim_product(id, category_id, title, description, brand, 
+                cur.execute("""INSERT INTO gold.dim_product(id, category_id, title, description, brand,
                                                         weight, dimension_width,dimension_height,dimension_depth, barcode)
 
                             SELECT DISTINCT ON (sil.id)
                                 sil.id,
                                 cat.category_id,
-                                sil.title, 
-                                sil.description, 
-                                sil.brand, 
-                                sil.weight, 
+                                sil.title,
+                                sil.description,
+                                sil.brand,
+                                sil.weight,
                                 sil.dimension_width,
                                 sil.dimension_height,
-                                sil.dimension_depth, 
+                                sil.dimension_depth,
                                 sil.barcode
                             FROM silver.products AS sil
                             JOIN gold.dim_category AS cat
-                            ON sil.category = cat.category_name 
+                            ON sil.category = cat.category_name
                             ORDER BY sil.id, sil.snapshot_date DESC
                             ON CONFLICT (id)
                             DO UPDATE SET
@@ -54,10 +49,10 @@ try:
 
         """)
 
-            cur.execute("""INSERT INTO gold.fact_product_snapshot(snapshot_date, product_id, category_id, price, 
+                cur.execute("""INSERT INTO gold.fact_product_snapshot(snapshot_date, product_id, category_id, price,
                                                                   discount_percentage, rating, availability_status)
 
-                            SELECT 
+                            SELECT
                                 sil.snapshot_date,
                                 prod.id,
                                 cat.category_id,
@@ -74,13 +69,26 @@ try:
                             DO NOTHING
 
 """)
-            # Apos execucao do INSERT INTO, ele sai do with ja dando commit automaticamente. 
+                logging.info(f'{cur.rowcount} rows inserted into gold.fact_product_snapshot')
+                # Apos execucao do INSERT INTO, ele sai do with ja dando commit automaticamente.
 
-except Exception:
-    logging.exception('An error occurred while connecting')
-    raise
+    except Exception:
+        logging.exception('An error occurred while building gold')
+        raise
 
-finally:
-    if conn:
-        conn.close()
+    finally:
+        if conn:
+            conn.close()
 
+
+if __name__ == '__main__':
+    BASE_DIR = Path(__file__).resolve().parents[2]
+    LOG_DIR = BASE_DIR / 'logs'
+    LOG_DIR.mkdir(exist_ok=True)
+
+    logging.basicConfig(level=logging.INFO,
+                        format="%(asctime)s - %(filename)s - %(message)s",
+                        filename=LOG_DIR / 'app.log',
+                        filemode='a')
+
+    run()
