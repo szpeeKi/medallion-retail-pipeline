@@ -1,0 +1,34 @@
+# Ajuste de rede para rodar no GitHub Codespaces.
+#
+# No Codespaces, containers em redes criadas pelo Compose nao conseguem falar entre si
+# (o firewall da maquina so encaminha trafego da rede padrao do Docker, a docker0).
+# Este arquivo coloca todos os servicos na rede padrao e usa "links" para um achar o outro pelo nome.
+#
+# Uso: no .env, definir
+#   COMPOSE_FILE=docker-compose.yaml:docker-compose.codespaces.yaml
+# Fora do Codespaces este arquivo nao e necessario.
+---
+services:
+  postgres:
+    network_mode: bridge
+
+  airflow-init:
+    network_mode: bridge
+    links:
+      - postgres
+
+  airflow-apiserver:
+    network_mode: bridge
+    links:
+      - postgres
+
+  airflow-scheduler:
+    network_mode: bridge
+    links:
+      - postgres
+      - airflow-apiserver
+
+  airflow-dag-processor:
+    network_mode: bridge
+    links:
+      - postgres
