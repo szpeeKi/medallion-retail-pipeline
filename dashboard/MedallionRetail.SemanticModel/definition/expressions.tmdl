@@ -1,0 +1,5 @@
+expression DataFolder = "C:\Users\devra\medallion-retail-pipeline\dashboard\data" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: db0b05cd-3524-42be-8abe-4391cedc82f2
+
+	annotation PBI_ResultType = Text
+

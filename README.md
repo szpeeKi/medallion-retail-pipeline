@@ -50,6 +50,12 @@ medallion-retail-pipeline/
 │ ├── docker-compose.yaml # Airflow 3 com LocalExecutor
 │ ├── docker-compose.codespaces.yaml # Ajuste de rede para o GitHub Codespaces
 │ └── .env.example
+├── dashboard/
+│ ├── MedallionRetail.pbip # Projeto Power BI (abrir este arquivo)
+│ ├── MedallionRetail.SemanticModel/ # Modelo: tabelas, relacionamentos e medidas DAX
+│ ├── MedallionRetail.Report/ # Paginas e visuais do relatorio
+│ ├── data/ # Extrato da gold em CSV (fonte do relatorio)
+│ └── img/ # Imagens das paginas
 ├── data/
 │ └── raw/ # JSONs brutos extraidos da API (versionamento ignorado)
 ├── infra/
@@ -62,6 +68,8 @@ medallion-retail-pipeline/
 │ │ └── create_schemas.py # DDL: schemas bronze/silver/gold e tabelas
 │ ├── extract/
 │ │ └── extract_products.py # Extracao da API -> data/raw
+│ ├── export/
+│ │ └── export_gold.py # Extrato da gold em CSV para o dashboard
 │ ├── load/
 │ │ └── load_bronze.py # Ingestao do JSON bruto no PostgreSQL
 │ └── transform/
@@ -199,6 +207,49 @@ O arquivo de 13/08/2026 é anterior à troca da fonte para a dummyjson e está e
 ### Limitação atual
 
 O Airflow roda em ambiente de desenvolvimento (Docker Compose), que não fica ligado 24 horas. Enquanto ele está de pé, a DAG dispara sozinha às 21h30; os dias em que ele esteve desligado são recuperados com *backfill*.
+
+---
+
+## 📊 Dashboard (Power BI)
+
+Relatório em Power BI construído sobre a camada Gold, em 4 páginas:
+
+| Página | Pergunta que responde |
+|---|---|
+| Visão geral | Como é o catálogo hoje: quantos produtos, preço, desconto, nota e disponibilidade |
+| Desconto e qualidade | O desconto acompanha a avaliação do produto? |
+| Plano de ação | O que fazer com cada produto: repor, investigar, rever desconto, destacar ou manter |
+| Saúde do pipeline | Em quais dias houve captura e quantas linhas cada dia carregou |
+
+![Visão geral](dashboard/img/visao_geral.png)
+![Desconto e qualidade](dashboard/img/desconto_e_qualidade.png)
+![Plano de ação](dashboard/img/plano_de_acao.png)
+![Saúde do pipeline](dashboard/img/saude_do_pipeline.png)
+
+### Como o plano de ação é decidido
+
+Cada produto recebe uma ação por regras simples, avaliadas nesta ordem:
+
+1. **Repor estoque:** disponibilidade `Low Stock`.
+2. **Investigar qualidade:** nota abaixo de 3.
+3. **Testar desconto menor:** nota de 4,2 ou mais e desconto de 10% ou mais.
+4. **Dar destaque:** nota de 4,2 ou mais e desconto abaixo de 5%.
+5. **Manter:** nenhum dos casos acima.
+
+A fonte não tem dados de venda, então cada ação é uma hipótese a testar, não uma conclusão. E como a dummyjson devolve sempre os mesmos valores, preço, desconto e nota não mudam de um dia para o outro: por isso o relatório mostra o retrato mais recente, e a única página com evolução no tempo é a de saúde do pipeline.
+
+### Como abrir
+
+1. Gere o extrato da Gold (precisa das variáveis `DB_*`):
+   ```bash
+   python -m src.export.export_gold
+   ```
+2. Abra `dashboard/MedallionRetail.pbip` no Power BI Desktop.
+3. Em **Transformar dados > Editar parâmetros**, aponte `DataFolder` para a pasta `dashboard/data` na sua máquina e clique em **Atualizar**.
+
+O relatório lê os CSV em vez de conectar direto no RDS porque o Power BI exige conexão criptografada e o Windows não confia, por padrão, na autoridade certificadora do RDS. O extrato evita instalar certificado na máquina e deixa o relatório abrível por qualquer pessoa, sem acesso ao banco.
+
+O projeto está no formato `.pbip` (texto), e não `.pbix` (binário), para que modelo, medidas DAX e páginas fiquem versionados e legíveis no Git.
 
 ---
 

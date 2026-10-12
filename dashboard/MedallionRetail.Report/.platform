@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "MedallionRetail"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "a80859b2-12cc-4d89-b605-e1dc16f42e14"
+  }
+}

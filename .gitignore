@@ -30,3 +30,6 @@ airflow/plugins/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Power BI (cache e configuracoes locais do projeto .pbip)
+**/.pbi/
