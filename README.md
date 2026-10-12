@@ -34,7 +34,7 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 * **Banco de Dados:** PostgreSQL no Amazon RDS
 * **Bibliotecas Principais:** `psycopg2`, `requests`, `boto3`, `logging`
 * **Cloud:** AWS Lambda + S3 (camada Raw), EventBridge Scheduler (agendamento) e Amazon RDS (Data Warehouse)
-* **Orquestração:** agendamento diário da extração via EventBridge Scheduler; Apache Airflow para Bronze → Silver → Gold *(roadmap)*
+* **Orquestração:** agendamento diário da extração via EventBridge Scheduler; Apache Airflow 3 (Docker Compose) para Bronze → Silver → Gold, com agendamento diário e *backfill*
 * **Práticas Adotadas:** Idempotência, Tratamento de Exceções, Logs de Execução, SQL DDL/DML, Modelagem Relacional.
 
 ---
@@ -43,6 +43,13 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 
 ```text
 medallion-retail-pipeline/
+├── airflow/
+│ ├── dags/
+│ │ ├── hello_airflow.py # DAG de teste (so escreve no log)
+│ │ └── medallion_retail.py # DAG diaria: bronze -> silver -> gold
+│ ├── docker-compose.yaml # Airflow 3 com LocalExecutor
+│ ├── docker-compose.codespaces.yaml # Ajuste de rede para o GitHub Codespaces
+│ └── .env.example
 ├── data/
 │ └── raw/ # JSONs brutos extraidos da API (versionamento ignorado)
 ├── infra/
@@ -122,6 +129,8 @@ python -m src.transform.transform_silver # 3. limpa e padroniza -> silver
 python -m src.transform.build_gold       # 4. monta o star schema -> gold
 ```
 
+O `load_bronze` aceita uma data opcional para carregar um dia anterior: `python -m src.load.load_bronze 2026-10-01`. Sem a data, vale o dia atual em São Paulo.
+
 A extração diária para o S3 é feita pela Lambda (`infra/aws/lambda_handler.py`), agendada no EventBridge Scheduler:
 
 | Parâmetro | Valor |
@@ -131,9 +140,65 @@ A extração diária para o S3 é feita pela Lambda (`infra/aws/lambda_handler.p
 | Payload | `{"endpoint": "products"}` |
 | Retentativas | 3, dentro de uma janela de 24h |
 
-O horário de 21h deixa o dia de negócio praticamente fechado e ainda sobra folga antes da virada do dia. As camadas Bronze, Silver e Gold ainda são executadas manualmente, na ordem acima.
+O horário de 21h deixa o dia de negócio praticamente fechado e ainda sobra folga antes da virada do dia. As camadas Bronze, Silver e Gold podem ser executadas manualmente, na ordem acima, ou pelo Airflow (próxima seção).
 
 O `src.extract.extract_products` faz a mesma extração salvando em `data/raw`, apenas para desenvolvimento local; ele não alimenta a Bronze.
+
+---
+
+## 🌬️ Orquestração com Airflow
+
+A DAG `medallion_retail` (`airflow/dags/medallion_retail.py`) executa as três camadas em sequência, chamando a função `run()` de cada script:
+
+```text
+load_bronze -> transform_silver -> build_gold
+```
+
+| Parâmetro | Valor |
+|---|---|
+| Agendamento | `30 21 * * *`, fuso `America/Sao_Paulo` |
+| Retentativas | 2, com 10 minutos de intervalo |
+| Execuções simultâneas | 1 |
+
+* **Por que 21h30:** a captura da Lambda roda às 21h com retentativas. A meia hora de folga evita processar um dia cujo arquivo ainda não chegou no S3.
+* **Se uma task falha, as seguintes não rodam:** a Gold nunca é montada em cima de uma Silver que deu erro.
+* **Data da carga:** cada execução carrega o arquivo do seu próprio dia, não o de "hoje". O Airflow guarda as datas em UTC, e 21h30 em São Paulo já é o dia seguinte em UTC, então a DAG converte a data para o fuso de São Paulo antes de procurar a partição no S3.
+
+### Subindo o ambiente
+
+O `docker-compose.yaml` é baseado no oficial do Airflow 3.3.2, enxuto para `LocalExecutor` (as tasks rodam dentro do scheduler). É uma configuração de desenvolvimento.
+
+```bash
+cd airflow
+cp .env.example .env                 # ajuste o AIRFLOW_UID com o resultado de: id -u
+mkdir -p dags logs plugins config
+docker compose up airflow-init       # so na primeira vez: prepara o banco interno e cria o usuario
+docker compose up -d
+```
+
+A interface fica em `http://localhost:8080` (usuário e senha padrão: `airflow`). As variáveis `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_DEFAULT_REGION` precisam existir no terminal que roda o `docker compose`: ele repassa os valores para os containers, sem gravá-los em arquivo.
+
+No GitHub Codespaces, mantenha a linha `COMPOSE_FILE` do `.env.example`: lá os containers só conversam entre si pela rede padrão do Docker, e o `docker-compose.codespaces.yaml` faz esse ajuste. Fora do Codespaces, remova essa linha. O IP de saída do Codespace também precisa estar liberado no security group do RDS.
+
+### Backfill
+
+Para reprocessar dias anteriores cujo arquivo já está no S3:
+
+```bash
+docker compose exec airflow-scheduler airflow backfill create \
+  --dag-id medallion_retail \
+  --from-date 2026-09-30T00:00:00-03:00 \
+  --to-date 2026-10-10T23:59:59-03:00 \
+  --max-active-runs 1
+```
+
+Um dia sem arquivo no S3 falha com `FileNotFoundError`, de propósito: é o sinal de que a captura daquele dia se perdeu. Para reprocessar um dia que já rodou com sucesso, acrescente `--reprocess-behavior completed`.
+
+O arquivo de 13/08/2026 é anterior à troca da fonte para a dummyjson e está em outro formato, então a carga desse dia falha na Bronze e as camadas seguintes não rodam.
+
+### Limitação atual
+
+O Airflow roda em ambiente de desenvolvimento (Docker Compose), que não fica ligado 24 horas. Enquanto ele está de pé, a DAG dispara sozinha às 21h30; os dias em que ele esteve desligado são recuperados com *backfill*.
 
 ---
 
@@ -142,4 +207,4 @@ O `src.extract.extract_products` faz a mesma extração salvando em `data/raw`, 
 O pipeline é incremental e diário. Existem dois tipos de falha, com consequências diferentes:
 
 * **Faltou o arquivo no S3 (falha na captura):** a API devolve apenas o estado atual dos produtos, então o retrato de um dia que não foi capturado **não pode ser recuperado depois**. Por isso a captura roda na nuvem, agendada, com retentativas automáticas.
-* **O arquivo está no S3, mas não foi processado:** nada se perde. Hoje o `load_bronze.py` carrega apenas o arquivo mais recente do dia corrente, então o reprocessamento de dias anteriores é manual. A orquestração com Airflow (roadmap) resolve isso com *backfill*, passando para cada execução a data que ela deve processar.
+* **O arquivo está no S3, mas não foi processado:** nada se perde. O `load_bronze.py` recebe a data que deve carregar, e o *backfill* do Airflow passa para cada execução o seu próprio dia. Como as cargas são idempotentes, reprocessar um dia já carregado não duplica nada.
