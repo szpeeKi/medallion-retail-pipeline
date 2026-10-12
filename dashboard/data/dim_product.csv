@@ -1,0 +1,31 @@
+id,category_id,title,brand,weight,dimension_width,dimension_height,dimension_depth,barcode
+1,1,Essence Mascara Lash Princess,Essence,4.00,15.14,13.08,22.99,5784719087687
+2,1,Eyeshadow Palette with Mirror,Glamour Beauty,9.00,9.26,22.47,27.67,9170275171413
+3,1,Powder Canister,Velvet Touch,8.00,29.27,27.93,20.59,8418883906837
+4,1,Red Lipstick,Chic Cosmetics,1.00,18.11,28.38,22.17,9467746727219
+5,1,Red Nail Polish,Nail Couture,8.00,21.63,16.48,29.84,4063010628104
+6,4,Calvin Klein CK One,Calvin Klein,7.00,29.36,27.76,20.72,2451534060749
+7,4,Chanel Coco Noir Eau De,Chanel,7.00,24.50,25.70,25.98,4091737746820
+8,4,Dior J'adore,Dior,4.00,27.67,28.28,11.83,1445086097250
+9,4,Dolce Shine Eau de,Dolce & Gabbana,6.00,27.28,29.88,18.30,3023868210708
+10,4,Gucci Bloom Eau de,Gucci,7.00,20.92,21.68,11.20,3170832177880
+11,3,Annibale Colombo Bed,Annibale Colombo,10.00,28.16,25.36,17.28,3610757456581
+12,3,Annibale Colombo Sofa,Annibale Colombo,6.00,12.75,20.55,19.06,1777662847736
+13,3,Bedside Table African Cherry,Furniture Co.,2.00,13.47,24.99,27.35,6441287925979
+14,3,Knoll Saarinen Executive Conference Chair,Knoll,10.00,13.81,7.50,5.62,8919386859966
+15,3,Wooden Bathroom Sink With Mirror,Bath Trends,10.00,7.98,8.88,28.46,1958104402873
+16,2,Apple,No Brand,9.00,13.66,11.01,9.73,7962803553314
+17,2,Beef Steak,No Brand,10.00,18.90,5.77,18.57,5640063409695
+18,2,Cat Food,No Brand,10.00,18.08,9.26,21.86,1483991328610
+19,2,Chicken Meat,No Brand,1.00,11.03,22.11,16.01,8829514594521
+20,2,Cooking Oil,No Brand,5.00,19.95,27.54,24.86,4874727824518
+21,2,Cucumber,No Brand,4.00,12.80,28.38,21.34,5300066378225
+22,2,Dog Food,No Brand,10.00,16.93,27.15,9.29,5906686116469
+23,2,Eggs,No Brand,2.00,11.42,7.44,16.95,3478638588469
+24,2,Fish Steak,No Brand,6.00,14.95,26.31,11.27,9595036192098
+25,2,Green Bell Pepper,No Brand,2.00,15.33,26.65,14.44,2365227493323
+26,2,Green Chili Pepper,No Brand,7.00,15.38,18.12,19.92,9335000538563
+27,2,Honey Jar,No Brand,2.00,9.28,21.72,17.74,6354306346329
+28,2,Ice Cream,No Brand,1.00,14.83,15.07,24.20,0788954559076
+29,2,Juice,No Brand,1.00,18.56,21.46,28.02,6936112580956
+30,2,Kiwi,No Brand,5.00,19.40,18.67,17.13,2530169917252

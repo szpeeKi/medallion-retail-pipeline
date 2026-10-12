@@ -1,0 +1,12 @@
+relationship snapshot_produto
+	fromColumn: Snapshot.product_id
+	toColumn: Produto.id
+
+relationship snapshot_categoria
+	fromColumn: Snapshot.category_id
+	toColumn: Categoria.category_id
+
+relationship snapshot_calendario
+	fromColumn: Snapshot.Data
+	toColumn: Calendario.Data
+

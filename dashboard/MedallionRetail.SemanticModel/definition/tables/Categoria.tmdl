@@ -1,0 +1,28 @@
+table Categoria
+	lineageTag: efce1528-13b7-4497-b683-4bc367a61858
+
+	column category_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 4433f6e7-fc1e-4573-8d78-a597feb65be6
+		summarizeBy: none
+		sourceColumn: category_id
+
+	column Categoria
+		dataType: string
+		lineageTag: f5eb849e-9bfb-442e-812d-3d413676ee9b
+		summarizeBy: none
+		sourceColumn: Categoria
+
+	partition Categoria = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(File.Contents(DataFolder & "\dim_category.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalho = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalho, {{"category_id", Int64.Type}, {"category_name", type text}}, "en-US"),
+				    Renomeado = Table.RenameColumns(Tipos, {{"category_name", "Categoria"}})
+				in
+				    Renomeado
+

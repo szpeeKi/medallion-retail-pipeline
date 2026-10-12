@@ -1,0 +1,105 @@
+table Produto
+	lineageTag: d90db720-40b3-4237-aa0a-2511a497afa6
+
+	column id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 86aa90ef-b4d5-4ba5-b708-e0d2f374bb78
+		summarizeBy: none
+		sourceColumn: id
+
+	column category_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 48c1e55c-9c7a-4b0b-a238-7e24c59d9fed
+		summarizeBy: none
+		sourceColumn: category_id
+
+	column Produto
+		dataType: string
+		lineageTag: 7378a52b-e3ad-4f01-bc53-460783626c45
+		summarizeBy: none
+		sourceColumn: Produto
+
+	column Marca
+		dataType: string
+		lineageTag: 47e54d57-55ea-4557-bec0-0c9020e6765c
+		summarizeBy: none
+		sourceColumn: Marca
+
+	column Categoria = LOOKUPVALUE(Categoria[Categoria], Categoria[category_id], Produto[category_id])
+		dataType: string
+		lineageTag: 3f722e42-ea14-440f-97b6-eb85663eb783
+		summarizeBy: none
+
+	column 'Preço atual' =
+			VAR d = MAX(Snapshot[Data])
+			RETURN MAXX(FILTER(Snapshot, Snapshot[product_id] = Produto[id] && Snapshot[Data] = d), Snapshot[Preço])
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 83fca38e-56a2-45c6-9345-4de376d0132e
+		summarizeBy: none
+
+	column 'Desconto atual %' =
+			VAR d = MAX(Snapshot[Data])
+			RETURN MAXX(FILTER(Snapshot, Snapshot[product_id] = Produto[id] && Snapshot[Data] = d), Snapshot[Desconto %])
+		dataType: double
+		formatString: 0.00
+		lineageTag: 276f8843-1c67-4d19-aed6-e685dc369910
+		summarizeBy: none
+
+	column 'Nota atual' =
+			VAR d = MAX(Snapshot[Data])
+			RETURN MAXX(FILTER(Snapshot, Snapshot[product_id] = Produto[id] && Snapshot[Data] = d), Snapshot[Nota])
+		dataType: double
+		formatString: 0.00
+		lineageTag: d71a84a7-4f25-401a-b53c-f874e73d4788
+		summarizeBy: none
+
+	column 'Disponibilidade atual' =
+			VAR d = MAX(Snapshot[Data])
+			RETURN MAXX(FILTER(Snapshot, Snapshot[product_id] = Produto[id] && Snapshot[Data] = d), Snapshot[Disponibilidade])
+		dataType: string
+		lineageTag: a32c0b8f-2d65-4577-ad80-cb66ea210cd0
+		summarizeBy: none
+
+	column 'Ação sugerida' =
+			SWITCH(
+			    TRUE(),
+			    Produto[Disponibilidade atual] = "Low Stock", "1. Repor estoque",
+			    Produto[Nota atual] < 3, "2. Investigar qualidade",
+			    Produto[Nota atual] >= 4.2 && Produto[Desconto atual %] >= 10, "3. Testar desconto menor",
+			    Produto[Nota atual] >= 4.2 && Produto[Desconto atual %] < 5, "4. Dar destaque",
+			    "5. Manter"
+			)
+		dataType: string
+		lineageTag: 5bf15573-766b-4e49-97a9-fb511f98c124
+		summarizeBy: none
+
+	column 'Por quê' =
+			SWITCH(
+			    Produto[Ação sugerida],
+			    "1. Repor estoque", "Estoque baixo: risco de ficar sem o produto",
+			    "2. Investigar qualidade", "Nota abaixo de 3: desconto não resolve avaliação ruim",
+			    "3. Testar desconto menor", "Nota alta com desconto de 10% ou mais: pode estar abrindo mão de margem",
+			    "4. Dar destaque", "Nota alta quase sem desconto: bom candidato a vitrine",
+			    "Sem sinal de alerta"
+			)
+		dataType: string
+		lineageTag: 18d32abf-3d74-4572-9c11-078f9ad2edad
+		summarizeBy: none
+
+	partition Produto = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(File.Contents(DataFolder & "\dim_product.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalho = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Colunas = Table.SelectColumns(Cabecalho, {"id", "category_id", "title", "brand"}),
+				    Tipos = Table.TransformColumnTypes(Colunas, {{"id", Int64.Type}, {"category_id", Int64.Type}, {"title", type text}, {"brand", type text}}, "en-US"),
+				    Renomeado = Table.RenameColumns(Tipos, {{"title", "Produto"}, {"brand", "Marca"}})
+				in
+				    Renomeado
+

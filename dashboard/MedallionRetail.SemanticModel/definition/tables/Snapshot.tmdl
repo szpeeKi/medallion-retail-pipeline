@@ -1,0 +1,148 @@
+table Snapshot
+	lineageTag: 4d9c1b98-1af3-479f-9cfe-150a27616798
+
+	measure 'Data mais recente' = CALCULATE(MAX(Snapshot[Data]), REMOVEFILTERS())
+		formatString: dd/MM/yyyy
+		lineageTag: 663de6f2-8f70-4651-bf72-7fa8a6baf9b5
+
+	measure Produtos =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(DISTINCTCOUNT(Snapshot[product_id]), Snapshot[Data] = d)
+		formatString: 0
+		lineageTag: 780e608f-88a3-4605-ad92-d6be777824b5
+
+	measure Categorias =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(DISTINCTCOUNT(Snapshot[category_id]), Snapshot[Data] = d)
+		formatString: 0
+		lineageTag: 728d5b3f-69fc-40e7-81b0-b916d27c20ac
+
+	measure 'Preço médio' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(AVERAGE(Snapshot[Preço]), Snapshot[Data] = d)
+		formatString: #,0.00
+		lineageTag: 31b26ba1-0e04-4b60-bfcd-b6bdb8006be7
+
+	measure 'Desconto médio' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(AVERAGE(Snapshot[Desconto %]), Snapshot[Data] = d) / 100
+		formatString: 0.0%
+		lineageTag: ca2a0685-bcab-42e7-af55-f421e79e51a9
+
+	measure 'Nota média' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(AVERAGE(Snapshot[Nota]), Snapshot[Data] = d)
+		formatString: 0.00
+		lineageTag: 1802c524-9026-4caf-9b4f-a5d6a36d44f7
+
+	measure 'Valor de catálogo' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(SUM(Snapshot[Preço]), Snapshot[Data] = d)
+		formatString: #,0.00
+		lineageTag: 72538587-1b78-4954-b332-89235e75bb7d
+
+	measure 'Valor em desconto' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(SUMX(Snapshot, Snapshot[Preço] * Snapshot[Desconto %] / 100), Snapshot[Data] = d)
+		formatString: #,0.00
+		lineageTag: 5005ee89-3102-40b6-9c95-d73dfaadf501
+
+	measure 'Desconto ponderado' = DIVIDE([Valor em desconto], [Valor de catálogo])
+		formatString: 0.0%
+		lineageTag: 05c69d20-cecf-4264-86cf-1a08d710db37
+
+	measure 'Estoque baixo' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(DISTINCTCOUNT(Snapshot[product_id]), Snapshot[Data] = d, Snapshot[Disponibilidade] = "Low Stock") + 0
+		formatString: 0
+		lineageTag: 6a5240ca-def3-4d72-a896-08d4114e017b
+
+	measure 'Produtos com nota abaixo de 3' =
+			VAR d = [Data mais recente]
+			RETURN CALCULATE(DISTINCTCOUNT(Snapshot[product_id]), Snapshot[Data] = d, Snapshot[Nota] < 3) + 0
+		formatString: 0
+		lineageTag: c081c93e-1472-4cf3-9c4e-39013a5d8111
+
+	measure 'Linhas carregadas' = COUNTROWS(Snapshot)
+		formatString: #,0
+		lineageTag: 1f572906-4db0-4628-874a-d017feba8f99
+
+	measure 'Dias capturados' = DISTINCTCOUNT(Snapshot[Data])
+		formatString: 0
+		lineageTag: 934964c9-7462-4e36-a1b7-2dbcecefb59e
+
+	measure 'Dias no período' = COUNTROWS(Calendario)
+		formatString: 0
+		lineageTag: 370ddddf-3165-43d8-b535-fead3009eef5
+
+	measure 'Dias sem captura' = [Dias no período] - [Dias capturados]
+		formatString: 0
+		lineageTag: a2ccf24d-9616-481f-b8fa-7e67902620fa
+
+	measure 'Cobertura da captura' = DIVIDE([Dias capturados], [Dias no período])
+		formatString: 0.0%
+		lineageTag: 8d37790b-fd9f-48ab-87cb-3ab0de7e5aad
+
+	column Data
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		lineageTag: 010f47ee-3067-4334-95de-5521c7a48ea9
+		summarizeBy: none
+		sourceColumn: Data
+
+		annotation UnderlyingDateTimeDataType = Date
+
+	column product_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: cb3cac24-9681-47f7-9fd8-9b6952ec1df1
+		summarizeBy: none
+		sourceColumn: product_id
+
+	column category_id
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: f82b8a2c-441d-4ba3-bdb2-f8beaeac9b32
+		summarizeBy: none
+		sourceColumn: category_id
+
+	column Preço
+		dataType: double
+		formatString: #,0.00
+		lineageTag: 1705948c-879a-4f90-8728-6662c4b323a2
+		summarizeBy: none
+		sourceColumn: Preço
+
+	column 'Desconto %'
+		dataType: double
+		formatString: 0.00
+		lineageTag: a7fb54fc-5b55-41ce-abe0-93362af01d07
+		summarizeBy: none
+		sourceColumn: Desconto %
+
+	column Nota
+		dataType: double
+		formatString: 0.00
+		lineageTag: fbe854ee-895e-4665-8920-621e230e826a
+		summarizeBy: none
+		sourceColumn: Nota
+
+	column Disponibilidade
+		dataType: string
+		lineageTag: bdabe4b0-2db0-4c9e-a629-d86e48ecc283
+		summarizeBy: none
+		sourceColumn: Disponibilidade
+
+	partition Snapshot = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(File.Contents(DataFolder & "\fact_product_snapshot.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalho = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalho, {{"snapshot_date", type date}, {"product_id", Int64.Type}, {"category_id", Int64.Type}, {"price", type number}, {"discount_percentage", type number}, {"rating", type number}, {"availability_status", type text}}, "en-US"),
+				    Renomeado = Table.RenameColumns(Tipos, {{"snapshot_date", "Data"}, {"price", "Preço"}, {"discount_percentage", "Desconto %"}, {"rating", "Nota"}, {"availability_status", "Disponibilidade"}})
+				in
+				    Renomeado
+

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "p3actionsv02",
+  "position": {
+    "x": 10,
+    "y": 640,
+    "z": 2000,
+    "width": 160,
+    "height": 70,
+    "tabOrder": 2000
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Fonte: camada Gold",
+                    "textStyle": {
+                      "fontSize": "8pt",
+                      "color": "#B4C0E0"
+                    }
+                  }
+                ]
+              },
+              {
+                "textRuns": [
+                  {
+                    "value": "Dados fictícios (dummyjson)",
+                    "textStyle": {
+                      "fontSize": "8pt",
+                      "color": "#B4C0E0"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

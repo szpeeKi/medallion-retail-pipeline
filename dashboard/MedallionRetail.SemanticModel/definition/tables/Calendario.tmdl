@@ -1,0 +1,15 @@
+table Calendario
+	lineageTag: 6a544505-0a02-4b56-b434-93ec872a4452
+
+	column Data
+		dataType: dateTime
+		formatString: dd/MM/yyyy
+		lineageTag: df8c2df0-3c3b-420d-90a4-e1bee5a66257
+		summarizeBy: none
+		isNameInferred
+		sourceColumn: [Data]
+
+	partition Calendario = calculated
+		mode: import
+		source = SELECTCOLUMNS(CALENDAR(MIN(Snapshot[Data]), MAX(Snapshot[Data])), "Data", [Date])
+

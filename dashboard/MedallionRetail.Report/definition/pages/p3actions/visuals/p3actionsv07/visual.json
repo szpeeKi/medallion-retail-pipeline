@@ -1,0 +1,130 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.13.0/schema.json",
+  "name": "p3actionsv07",
+  "position": {
+    "x": 200,
+    "y": 354,
+    "z": 7000,
+    "width": 1060,
+    "height": 346,
+    "tabOrder": 7000
+  },
+  "visual": {
+    "visualType": "tableEx",
+    "drillFilterOtherVisuals": true,
+    "query": {
+      "queryState": {
+        "Values": {
+          "projections": [
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Ação sugerida"
+                }
+              },
+              "queryRef": "Produto.Ação sugerida",
+              "nativeQueryRef": "Ação sugerida"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Produto"
+                }
+              },
+              "queryRef": "Produto.Produto",
+              "nativeQueryRef": "Produto"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Preço atual"
+                }
+              },
+              "queryRef": "Produto.Preço atual",
+              "nativeQueryRef": "Preço atual"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Desconto atual %"
+                }
+              },
+              "queryRef": "Produto.Desconto atual %",
+              "nativeQueryRef": "Desconto atual %"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Nota atual"
+                }
+              },
+              "queryRef": "Produto.Nota atual",
+              "nativeQueryRef": "Nota atual"
+            },
+            {
+              "field": {
+                "Column": {
+                  "Expression": {
+                    "SourceRef": {
+                      "Entity": "Produto"
+                    }
+                  },
+                  "Property": "Por quê"
+                }
+              },
+              "queryRef": "Produto.Por quê",
+              "nativeQueryRef": "Por quê"
+            }
+          ]
+        }
+      }
+    },
+    "visualContainerObjects": {
+      "title": [
+        {
+          "properties": {
+            "show": {
+              "expr": {
+                "Literal": {
+                  "Value": "true"
+                }
+              }
+            },
+            "text": {
+              "expr": {
+                "Literal": {
+                  "Value": "'Produtos e ação sugerida'"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
