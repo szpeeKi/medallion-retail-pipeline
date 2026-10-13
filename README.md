@@ -1,9 +1,9 @@
 # 🏅 Medallion Retail Pipeline
 
 ## 📖 Sobre o Projeto
-End-to-end Data Engineering pipeline usando Python, PostgreSQL e AWS, totalmente baseado na **Arquitetura Medallion** (Raw, Bronze, Silver e Gold).
+Pipeline de dados ponta a ponta usando Python, SQL, AWS, Apache Airflow e Power BI, baseado na **Arquitetura Medallion** (Raw, Bronze, Silver e Gold).
 
-Este projeto extrai dados de produtos da API pública [dummyjson.com](https://dummyjson.com) e processa essas informações através de camadas progressivas de qualidade de dados, culminando em um modelo dimensional (Star Schema) otimizado para consumo por ferramentas de Business Intelligence (BI).
+Este projeto extrai dados de produtos da API pública [dummyjson.com](https://dummyjson.com) e processa essas informações através de camadas progressivas de qualidade de dados, culminando em um modelo dimensional (Star Schema) consumido por um dashboard em Power BI. Os dados são fictícios (30 produtos por dia): o foco do projeto está na arquitetura e nas decisões de engenharia, não no volume.
 
 ---
 
@@ -11,7 +11,7 @@ Este projeto extrai dados de produtos da API pública [dummyjson.com](https://du
 
 O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 
-* **Ingestion (Raw):** Extração via AWS Lambda, disparada todo dia às 21h (horário de São Paulo) pelo EventBridge Scheduler, que salva o JSON bruto da API particionado por data no S3 (bucket `medallion-retail-raw-rafa`), evitando *Data Swamp*. A partição usa o fuso `America/Sao_Paulo`, para refletir o dia do negócio no Brasil. O script `extract_products.py` cobre a mesma extração para uso local em desenvolvimento.
+* **Ingestion (Raw):** Extração via AWS Lambda, disparada todo dia às 21h (horário de São Paulo) pelo EventBridge Scheduler, que salva o JSON bruto da API particionado por data no S3, evitando *Data Swamp*. A partição usa o fuso `America/Sao_Paulo`, para refletir o dia do negócio no Brasil. O script `extract_products.py` cobre a mesma extração para uso local em desenvolvimento.
 * **🥉 Bronze Layer:** Carga (Load) dos dados brutos do S3 no PostgreSQL, garantindo um espelho exato da origem e proteção contra duplicatas (`ON CONFLICT DO NOTHING`). É *append-only*: cada carga é guardada junto com o nome do arquivo de origem (`source_file`), formando o histórico completo de tudo o que entrou no pipeline.
 * **🥈 Silver Layer:** Transformação (ELT) usando o motor do banco de dados para limpeza, padronização de categorias, tratamento de campos JSONB e remoção de nulos.
 * **🥇 Gold Layer:** Modelagem Dimensional (*Star Schema*). `dim_category` e `dim_product` (SCD Tipo 1, sempre com o atributo mais recente do produto) e a tabela fato `fact_product_snapshot`, granular por produto e por dia de snapshot, com métricas de preço, desconto, avaliação e status de disponibilidade.
@@ -45,7 +45,6 @@ O pipeline foi estruturado seguindo o padrão da indústria de camadas lógicas:
 medallion-retail-pipeline/
 ├── airflow/
 │ ├── dags/
-│ │ ├── hello_airflow.py # DAG de teste (so escreve no log)
 │ │ └── medallion_retail.py # DAG diaria: bronze -> silver -> gold
 │ ├── docker-compose.yaml # Airflow 3 com LocalExecutor
 │ ├── docker-compose.codespaces.yaml # Ajuste de rede para o GitHub Codespaces
@@ -75,7 +74,7 @@ medallion-retail-pipeline/
 │ └── transform/
 │ ├── transform_silver.py # Limpeza e padronizacao (ELT)
 │ └── build_gold.py # Star Schema (dimensoes + fato)
-├── tests/ # Testes automatizados
+├── tests/ # Reservada para testes automatizados (ainda vazia)
 ├── requirements.txt # Dependencias do projeto
 ├── .gitignore
 └── README.md
@@ -96,27 +95,29 @@ pip install -r requirements.txt
 
 ### 2. Variáveis de ambiente
 
-Nenhuma credencial fica no código. Os scripts leem a conexão com o banco destas variáveis:
+Nenhuma credencial ou nome de recurso fica no código. Os scripts leem estas variáveis:
 
 | Variável | O que é |
 |---|---|
 | `DB_HOST` | Endpoint do PostgreSQL (ex.: `<instancia>.<id>.us-east-1.rds.amazonaws.com`) |
 | `DB_USER` | Usuário do banco |
 | `DB_PASSWORD` | Senha do banco |
+| `BUCKET_NAME` | Nome do bucket S3 da camada Raw (o mesmo configurado na Lambda) |
 
 ```powershell
 # PowerShell (vale só para a sessão atual do terminal)
 $env:DB_HOST = "..."
 $env:DB_USER = "..."
 $env:DB_PASSWORD = "..."
+$env:BUCKET_NAME = "..."
 ```
 
 ```bash
 # Bash
-export DB_HOST="..." DB_USER="..." DB_PASSWORD="..."
+export DB_HOST="..." DB_USER="..." DB_PASSWORD="..." BUCKET_NAME="..."
 ```
 
-A Lambda usa a variável `BUCKET_NAME`, configurada no próprio console da AWS.
+A Lambda usa a mesma variável `BUCKET_NAME`, configurada no próprio console da AWS.
 
 ### 3. Credenciais AWS
 
@@ -128,7 +129,7 @@ O security group da instância RDS só libera a porta `5432` para IPs específic
 
 ---
 
-## ▶️ Ordem de Execucao
+## ▶️ Ordem de Execução
 
 ```bash
 python -m src.database.create_schemas    # 1. cria schemas e tabelas (idempotente)
@@ -184,7 +185,7 @@ docker compose up airflow-init       # so na primeira vez: prepara o banco inter
 docker compose up -d
 ```
 
-A interface fica em `http://localhost:8080` (usuário e senha padrão: `airflow`). As variáveis `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` e `AWS_DEFAULT_REGION` precisam existir no terminal que roda o `docker compose`: ele repassa os valores para os containers, sem gravá-los em arquivo.
+A interface fica em `http://localhost:8080` (usuário e senha padrão: `airflow`). As variáveis `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` e `BUCKET_NAME` precisam existir no terminal que roda o `docker compose`: ele repassa os valores para os containers, sem gravá-los em arquivo.
 
 No GitHub Codespaces, mantenha a linha `COMPOSE_FILE` do `.env.example`: lá os containers só conversam entre si pela rede padrão do Docker, e o `docker-compose.codespaces.yaml` faz esse ajuste. Fora do Codespaces, remova essa linha. O IP de saída do Codespace também precisa estar liberado no security group do RDS.
 
@@ -259,3 +260,15 @@ O pipeline é incremental e diário. Existem dois tipos de falha, com consequên
 
 * **Faltou o arquivo no S3 (falha na captura):** a API devolve apenas o estado atual dos produtos, então o retrato de um dia que não foi capturado **não pode ser recuperado depois**. Por isso a captura roda na nuvem, agendada, com retentativas automáticas.
 * **O arquivo está no S3, mas não foi processado:** nada se perde. O `load_bronze.py` recebe a data que deve carregar, e o *backfill* do Airflow passa para cada execução o seu próprio dia. Como as cargas são idempotentes, reprocessar um dia já carregado não duplica nada.
+
+---
+
+## 🚧 Limitações e próximos passos
+
+O que o projeto **não** faz hoje, de propósito ou por enquanto:
+
+* **Não roda 24 horas por dia por inteiro.** A captura (Lambda) roda sempre; o Airflow roda em ambiente de desenvolvimento e recupera os dias parados com *backfill*.
+* **Não tem testes automatizados.** A validação é feita por contagem de linhas no banco a cada camada (por exemplo, reprocessar um dia já carregado insere 0 linhas).
+* **Não usa dados reais nem de venda.** A fonte é a dummyjson, com valores fictícios que não mudam de um dia para o outro.
+
+Próximos passos: testes automatizados, Airflow em um servidor que fique ligado 24 horas e transformações com dbt.

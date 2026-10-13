@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo
 
 sp_zoneinfo = ZoneInfo("America/Sao_Paulo")
 
-BUCKET = 'medallion-retail-raw-rafa'
 PREFIX = 'products/'
 
 query = """INSERT INTO bronze.products (id, title,description,category, price, discount_percentage, rating, stock,tags, brand,
@@ -29,17 +28,19 @@ def run(load_date=None):
 
     conn = None
     try:
+        # O nome do bucket vem do ambiente, como na Lambda: nada de infraestrutura gravado no codigo.
+        bucket = os.environ['BUCKET_NAME']
         s3 = boto3.client('s3')
 
-        listing = s3.list_objects_v2(Bucket=BUCKET, Prefix=day_prefix)
+        listing = s3.list_objects_v2(Bucket=bucket, Prefix=day_prefix)
         keys = sorted(obj['Key'] for obj in listing.get('Contents', []) if obj['Key'].endswith('.json'))
 
         if not keys:
-            raise FileNotFoundError(f'No file found for {load_date} in s3://{BUCKET}/{day_prefix}')
+            raise FileNotFoundError(f'No file found for {load_date} in s3://{bucket}/{day_prefix}')
 
         source_file = keys[-1]
 
-        response = s3.get_object(Bucket=BUCKET, Key=source_file)
+        response = s3.get_object(Bucket=bucket, Key=source_file)
 
         json_data = json.load(response['Body'])
 
